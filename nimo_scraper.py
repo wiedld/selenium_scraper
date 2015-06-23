@@ -1,4 +1,5 @@
 # # TO DO
+#     - convert start_date to actual dattime object
 #     - update path with wiedld or user info, imported from os environ
 #     - update date in xml file path
 #     - click on window for xml download
@@ -32,18 +33,21 @@ class UtilityAccount(object):
 
     def setup(self):
         """start selenium web server"""
+
         self.browser = webdriver.Firefox()
         print "setup complete for %s" % (self.user_login)
 
 
     def tear_down(self):
         """start selenium web server"""
+
         self.browser.close()
         print "teardown complete for %s" % (self.user_login)
 
 
     def login_nimo(self):
         """login to nimo acct. (National Grid, Niagara Mohawk)"""
+
         login_id = self.browser.find_element_by_id("MainContent_UCSignIn_txtSigninID")
         login_id.send_keys(self.user_login)
 
@@ -62,12 +66,26 @@ class UtilityAccount(object):
 
 
     def convert_xml_to_csv(self, path):
-        """take downloaded nimo acct, in xml, and export to csv"""
+        """take downloaded nimo data in xml, and export to csv. xml schema standard is here: https://naesb.org//copyright/espi.xsd"""
+
         xml_stream = self.xml_stream_generator(path)
 
-        for line in xml_stream:
-            print line
-            print
+        new_filename = "%s_usage_cost.csv" % self.user_login
+        with open(new_filename, "w") as fp:
+            row_for_timept = csv.writer(fp, delimiter=",")
+
+            for line in xml_stream:
+                datapoint = ET.fromstring(line)
+
+                for child in datapoint.iter():
+                    if child.tag == '{http://naesb.org/espi}start':
+                        start_date = child.text
+                    if child.tag == '{http://naesb.org/espi}value':
+                        value = child.text
+                    if child.tag == '{http://naesb.org/espi}cost':
+                        cost = float(child.text)/(10**4)  # 4 decimal places
+
+                row_for_timept.writerow([start_date, value, cost])
 
 
     def xml_stream_generator(self, path):
@@ -104,8 +122,9 @@ class UtilityAccount(object):
         time.sleep(0.2)
         dwnload_alert = self.browser.switch_to_alert()
         time.sleep(0.2)
-        dwnload_alert.send_keys(Keys.RETURN)
-        print dwnload_alert
+        # alert_driver = dwnload_alert.driver
+        # alert_driver.send_keys(Keys.RETURN)
+        # print dwnload_alert
 
         # alert_driver = dwnload_alert.driver
         # sub_button = alert_driver.find_element_by_tag_name('input')

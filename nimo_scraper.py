@@ -5,8 +5,10 @@
     To Run:
         1 - install requirements.
         2 - source utility login creds to os
-        3 - launch selenium server from cmd line:
-                > java -jar selenium-server-standalone-2.28.0.jar
+        3 - download the selenium server:
+                http://docs.seleniumhq.org/download/
+        4 - launch selenium server from cmd line:
+                > java -jar selenium-server-standalone-2.x.x.jar
 
 """
 

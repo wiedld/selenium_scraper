@@ -1,9 +1,21 @@
+# # TO DO
+#     - update path with wiedld or user info, imported from os environ
+#     - update date in xml file path
+#     - click on window for xml download
+#         - try/except on this window
+
+
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException
+import selenium.webdriver.firefox.webdriver
+import selenium.webdriver.common.alert
 # The Keys class provide keys in the keyboard like RETURN, F1, ALT etc.
 from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import NoSuchElementException
 import time
 import os
+import csv
+import re
+import xml.etree.ElementTree as ET
 
 
 test_login = os.environ["nimo_test_login"]
@@ -31,7 +43,7 @@ class UtilityAccount(object):
 
 
     def login_nimo(self):
-        """login for nimo acct"""
+        """login to nimo acct. (National Grid, Niagara Mohawk)"""
         login_id = self.browser.find_element_by_id("MainContent_UCSignIn_txtSigninID")
         login_id.send_keys(self.user_login)
 
@@ -39,6 +51,40 @@ class UtilityAccount(object):
         pwd.send_keys(self.user_pwd)
 
         self.browser.find_element_by_id("MainContent_UCSignIn_btnSignin").click()
+
+        time.sleep(0.2)         # let login process complete
+
+        # confirm login successful
+        try:
+            assert "National Grid - StateLandingNY" in self.browser.title
+        except:
+            print "login failed"
+
+
+    def convert_xml_to_csv(self, path):
+        """take downloaded nimo acct, in xml, and export to csv"""
+        xml_stream = self.xml_stream_generator(path)
+
+        for line in xml_stream:
+            print line
+            print
+
+
+    def xml_stream_generator(self, path):
+        """generate streaming xml from file. yields xml data blocks."""
+
+        node_start = lambda x: re.match("<ns:IntervalBlock", x) != None
+        node_end = lambda x: re.match("</ns:IntervalBlock", x) != None
+
+        with open(path) as f:
+            node = ""
+            for line in f:
+                l = line.strip()
+                if node_start(l):
+                    node = ""
+                node = node + l
+                if node_end(l):
+                    yield node
 
 
     def get_usage_data(self):
@@ -49,14 +95,37 @@ class UtilityAccount(object):
 
         self.login_nimo()
 
-        # next page loads
+        self.browser.find_element_by_id("MainContent_StateLandingNY1_Hyperlink44").click()
+
+        self.browser.find_element_by_id("MainContent_TabContainerUsageAndCost_TabPanelElectricityUsage_ElectricityUsageView_UCElectricityUsage_hlkXML").click()
+        ######################################################
+
+        # dwnload_alert = self.browser.switch_to_frame("Opening ElectricityXMLdata6_22_2015")
         time.sleep(0.2)
+        dwnload_alert = self.browser.switch_to_alert()
+        time.sleep(0.2)
+        dwnload_alert.send_keys(Keys.RETURN)
+        print dwnload_alert
+
+        # alert_driver = dwnload_alert.driver
+        # sub_button = alert_driver.find_element_by_tag_name('input')
+        # print sub_button
+
+        # ele = dwnload_alert.getAlertText
+        # print ele
+
+        ###################################
+        # download will be named with date in format "ElectricityXMLdata6_22_2015"
+        # ###################################
+        # path = "/Users/wiedld/Downloads/ElectricityXMLdata6_23_2015"
+        # self.convert_xml_to_csv(path)
 
         # self.tear_down()
         print "Task complete for %s" % (self.user_login)
 
 
 if __name__ == "__main__":
-    testcase = UtilityAccount("nimo",test_login,test_pwd)
-    testcase.get_usage_data()
-
+    testcase = UtilityAccount("nimo", test_login, test_pwd)
+    # testcase.get_usage_data()
+    path = "/Users/wiedld/Downloads/ElectricityXMLdata6_23_2015"
+    testcase.convert_xml_to_csv(path)

@@ -16,9 +16,12 @@ from selenium import webdriver
 import selenium.webdriver.firefox.webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import time
 from datetime import datetime, date
-import os, os.path
+import os
 import csv
 import re
 import xml.etree.ElementTree as ET
@@ -59,10 +62,12 @@ class UtilityAccount(object):
     def login_nimo(self):
         """login to nimo acct. (National Grid, Niagara Mohawk)"""
 
-        login_id = self.browser.find_element_by_id("MainContent_UCSignIn_txtSigninID")
+        login_id = WebDriverWait(self.browser, 10).until(
+        EC.presence_of_element_located((By.ID, "MainContent_UCSignIn_txtSigninID")))
         login_id.send_keys(self.user_login)
 
-        pwd = self.browser.find_element_by_id("MainContent_UCSignIn_txtPassword")
+        pwd = WebDriverWait(self.browser, 10).until(
+        EC.presence_of_element_located((By.ID, "MainContent_UCSignIn_txtPassword")))
         pwd.send_keys(self.user_pwd)
 
         self.browser.find_element_by_id("MainContent_UCSignIn_btnSignin").click()

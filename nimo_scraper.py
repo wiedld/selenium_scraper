@@ -1,19 +1,18 @@
-# # TO DO
-#     - convert start_date to actual dattime object
-#     - update path with wiedld or user info, imported from os environ
-#     - update date in xml file path
-#     - click on window for xml download
-#         - try/except on this window
 
+"""
+
+
+"""
+
+#################################################################
 
 from selenium import webdriver
 import selenium.webdriver.firefox.webdriver
-import selenium.webdriver.common.alert
-# The Keys class provide keys in the keyboard like RETURN, F1, ALT etc.
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException
 import time
-import os
+from datetime import datetime, date
+import os, os.path
 import csv
 import re
 import xml.etree.ElementTree as ET
@@ -32,9 +31,15 @@ class UtilityAccount(object):
 
 
     def setup(self):
-        """start selenium web server"""
+        """start selenium web server. set download settings for xml file."""
 
-        self.browser = webdriver.Firefox()
+        profile = webdriver.FirefoxProfile()
+        profile.set_preference("browser.download.folderList", 2)
+        profile.set_preference("browser.download.manager.showWhenStarting", False)
+        profile.set_preference("browser.download.dir", "/tmp/")
+        profile.set_preference("browser.helperApps.neverAsk.saveToDisk", "application/vnd.xml")
+
+        self.browser = webdriver.Firefox(firefox_profile=profile)
         print "setup complete for %s" % (self.user_login)
 
 
@@ -106,6 +111,8 @@ class UtilityAccount(object):
 
 
     def get_usage_data(self):
+        """navigating throught the utility website, downloading the xml file, and converting to csv saved to . directory."""
+
         self.setup()
 
         self.browser.get("https://www1.nationalgridus.com/SignIn-NY-RES")
@@ -116,35 +123,19 @@ class UtilityAccount(object):
         self.browser.find_element_by_id("MainContent_StateLandingNY1_Hyperlink44").click()
 
         self.browser.find_element_by_id("MainContent_TabContainerUsageAndCost_TabPanelElectricityUsage_ElectricityUsageView_UCElectricityUsage_hlkXML").click()
-        ######################################################
 
-        # dwnload_alert = self.browser.switch_to_frame("Opening ElectricityXMLdata6_22_2015")
-        time.sleep(0.2)
-        dwnload_alert = self.browser.switch_to_alert()
-        time.sleep(0.2)
-        # alert_driver = dwnload_alert.driver
-        # alert_driver.send_keys(Keys.RETURN)
-        # print dwnload_alert
+        # determine path of downloaded file
+        url_date = (date.today()).strftime('%m_%d_%Y')
+        # url doesn't have zero-padded month
+        url_date = url_date.lstrip('0')
+        path = "/tmp/ElectricityXMLdata%s" % url_date
+        self.convert_xml_to_csv(path)
 
-        # alert_driver = dwnload_alert.driver
-        # sub_button = alert_driver.find_element_by_tag_name('input')
-        # print sub_button
-
-        # ele = dwnload_alert.getAlertText
-        # print ele
-
-        ###################################
-        # download will be named with date in format "ElectricityXMLdata6_22_2015"
-        # ###################################
-        # path = "/Users/wiedld/Downloads/ElectricityXMLdata6_23_2015"
-        # self.convert_xml_to_csv(path)
-
-        # self.tear_down()
+        self.tear_down()
         print "Task complete for %s" % (self.user_login)
 
 
 if __name__ == "__main__":
     testcase = UtilityAccount("nimo", test_login, test_pwd)
-    # testcase.get_usage_data()
-    path = "/Users/wiedld/Downloads/ElectricityXMLdata6_23_2015"
-    testcase.convert_xml_to_csv(path)
+    testcase.get_usage_data()
+

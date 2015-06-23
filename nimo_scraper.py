@@ -1,6 +1,12 @@
 
 """
+    Purpose: to retrieve monthly kWh data from the National Grid (Niagara Mohawk territory) website, in downloaded xml, and save to output csv.
 
+    To Run:
+        1 - install requirements.
+        2 - source utility login creds to os
+        3 - launch selenium server from cmd line:
+                > java -jar selenium-server-standalone-2.28.0.jar
 
 """
 

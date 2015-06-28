@@ -1,6 +1,8 @@
 
 """
-    Purpose: to retrieve monthly kWh data from the National Grid (Niagara Mohawk territory) website, in downloaded xml, and save to output csv.
+    Purpose: to retrieve monthly kWh data from the National Grid
+    (Niagara Mohawk territory) website, in downloaded xml, and
+    save to output csv.
 
     To Run:
         1 - install requirements.
@@ -27,6 +29,7 @@ import os
 import csv
 import re
 import xml.etree.ElementTree as ET
+import urllib2
 
 
 test_login = os.environ["nimo_test_login"]
@@ -49,6 +52,9 @@ class UtilityAccount(object):
         profile.set_preference("browser.download.manager.showWhenStarting", False)
         profile.set_preference("browser.download.dir", "/tmp/")
         profile.set_preference("browser.helperApps.neverAsk.saveToDisk", "application/vnd.xml")
+        profile.set_preference("browser.helperApps.neverAsk.saveToDisk", "application/pdf")
+        # profile.set_preference("browser.helperApps.neverAsk.saveToDisk", "application/octet-stream")
+        profile.set_preference("browser.helperApps.neverAsk.saveToDisk", "application/vnd.pdf")
 
         self.browser = webdriver.Firefox(firefox_profile=profile)
         print "setup complete for %s" % (self.user_login)
@@ -84,7 +90,8 @@ class UtilityAccount(object):
 
 
     def convert_xml_to_csv(self, path):
-        """take downloaded nimo data in xml, and export to csv. xml schema standard is here: https://naesb.org//copyright/espi.xsd"""
+        """take downloaded nimo data in xml, and export to csv.
+        xml schema standard is here: https://naesb.org//copyright/espi.xsd"""
 
         xml_stream = self.xml_stream_generator(path)
 
@@ -124,7 +131,8 @@ class UtilityAccount(object):
 
 
     def get_usage_data(self):
-        """navigating throught the utility website, downloading the xml file, and converting to csv saved to . directory."""
+        """navigating through the utility website, downloading the xml file,
+         and converting to csv saved to . directory."""
 
         self.setup()
 
@@ -145,10 +153,40 @@ class UtilityAccount(object):
         self.convert_xml_to_csv(path)
 
         self.tear_down()
-        print "Task complete for %s" % (self.user_login)
+        print "Usage data retrieved for %s" % (self.user_login)
+
+
+    def get_bill_pdf_data(self):
+        """navigating through the utility website, downloading the pdf,
+        and regex for key params."""
+
+        self.setup()
+
+        self.browser.get("https://www1.nationalgridus.com/SignIn-NY-RES")
+        assert "My National Grid profile sign-in" in self.browser.title
+
+        self.login_nimo()
+
+        self.browser.find_element_by_id("MainContent_StateLandingNY1_Hyperlink38").click()
+
+        self.browser.find_element_by_id("MainContent_ViewYourBill_ViewYourBillYourCharges_hlkDownloadThisBill").click()
+
+        ########################################
+        # TODO: complete pdf download - file type not beign identified
+
+        # pdf_download_link = self.browser.find_element_by_id("MainContent_ViewYourBill_ViewYourBillYourCharges_hlkDownloadThisBill").get_attribute('href')
+
+        # self.browser.get(pdf_download_link)
+        ########################################
+
+        self.scrape_pdf(path)
+
+        # self.tear_down()
+        print "Usage data retrieved for %s" % (self.user_login)
 
 
 if __name__ == "__main__":
     testcase = UtilityAccount("nimo", test_login, test_pwd)
-    testcase.get_usage_data()
+    # testcase.get_usage_data()
+    testcase.get_bill_pdf_data()
 

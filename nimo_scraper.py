@@ -50,18 +50,18 @@ class UtilityAccount(object):
         self.user_login = user_login
         self.user_pwd = user_pwd
 
+    ###########################
+    # helper functions universally used
 
-    def setup(self):
+    def setup(self, filetype):
         """start selenium web server. set download settings for xml file."""
 
         profile = webdriver.FirefoxProfile()
         profile.set_preference("browser.download.folderList", 2)
         profile.set_preference("browser.download.manager.showWhenStarting", False)
         profile.set_preference("browser.download.dir", "/tmp/")
-        profile.set_preference("browser.helperApps.neverAsk.saveToDisk", "application/vnd.xml")
-        profile.set_preference("browser.helperApps.neverAsk.saveToDisk", "application/pdf")
-        # profile.set_preference("browser.helperApps.neverAsk.saveToDisk", "application/octet-stream")
-        profile.set_preference("browser.helperApps.neverAsk.saveToDisk", "application/vnd.pdf")
+        profile.set_preference("browser.helperApps.neverAsk.saveToDisk", filetype)
+        profile.set_preference("browser.helperApps.alwaysAsk.force", False)
 
         self.browser = webdriver.Firefox(firefox_profile=profile)
         print "setup complete for %s" % (self.user_login)
@@ -95,6 +95,9 @@ class UtilityAccount(object):
         except:
             print "login failed"
 
+
+    ###########################
+    # functions used for usage (xml) data
 
     def convert_xml_to_csv(self, path):
         """take downloaded nimo data in xml, and export to csv.
@@ -141,7 +144,7 @@ class UtilityAccount(object):
         """navigating through the utility website, downloading the xml file,
          and converting to csv saved to . directory."""
 
-        self.setup()
+        self.setup("application/vnd.xml")
 
         self.browser.get("https://www1.nationalgridus.com/SignIn-NY-RES")
         assert "My National Grid profile sign-in" in self.browser.title
@@ -163,9 +166,12 @@ class UtilityAccount(object):
         print "Usage data retrieved for %s" % (self.user_login)
 
 
+    ###########################
+    # functions used for PDF bill data
+
     def scrape_pdf(self, path):
         """take downloaded PDF, convert to html with cmd line tool,
-        import and search DOM tree."""
+        import and search with regex."""
 
         # conert PDF to html
         bash_cmd = "env/bin/pdf2txt.py -o output.html %s" % path
@@ -176,11 +182,10 @@ class UtilityAccount(object):
         # solution: try as string and search with regex
         pdf_string = open("output.html").read()
         acct_num = re.search(r'([0-9]{5}\-[0-9]{5})', pdf_string).group()
-        print acct_num
-        name_address = re.search(r'<span style="font\-family: IRLGKT\+Swiss721BT\-Roman; font\-size:10px">(\w+\s){2,4}<br>[0-9]{1,}[(\s\w+)\,\-]{1,}<br>[(\s\w+)\,\-]{1,}\s[0-9]{5}', pdf_string)
+        name_address = re.search(r'font\-size:10px">(\w+\s){2,4}<br>[0-9]{1,}[(\s\w+)\,\-]{1,}<br>[(\s\w+)\,\-]{1,}\s[0-9]{5}', pdf_string)
 
         # parse out the name, and address, separately
-        name = re.search(r'<span style="font\-family: IRLGKT\+Swiss721BT\-Roman; font\-size:10px">(\w+\s){2,4}<br>', name_address.group()).group().split(">")[1].replace("<br", "")
+        name = re.search(r'font\-size:10px">(\w+\s){2,4}<br>', name_address.group()).group().split(">")[1].replace("<br", "")
         address = re.search(r'<br>[0-9]{1,}[(\s\w+)\,\-]{1,}<br>[(\s\w+)\,\-]{1,}\s[0-9]{5}', name_address.group()).group().replace("<br>", "").replace("\n", ", ")
 
         return name, address
@@ -188,9 +193,16 @@ class UtilityAccount(object):
 
     def get_bill_pdf_data(self):
         """navigating through the utility website, downloading the pdf,
-        and regex for key params."""
+        send to pdf scraper. Return name and address on bill."""
 
-        self.setup()
+        self.setup("application/vnd.pdf")
+
+        ###  http://mimeapplication.net/  ###
+        # "application/x-pdf" "text/plain"  TExtEdit Document "application/textedit"
+        # "text/x-java" "application/pdf" "application/octet-stream" "application/download"
+        # application/acrobat application/x-pdf applications/vnd.pdf
+        # text/pdf text/x-pdf application/bat zz-application/zz-winassoc-ini
+        # application/x-bat application/unknown application/x-msdos-program
 
         self.browser.get("https://www1.nationalgridus.com/SignIn-NY-RES")
         assert "My National Grid profile sign-in" in self.browser.title
@@ -201,15 +213,7 @@ class UtilityAccount(object):
 
         self.browser.find_element_by_id("MainContent_ViewYourBill_ViewYourBillYourCharges_hlkDownloadThisBill").click()
 
-        ########################################
-        # TODO: complete pdf download - file type not beign identified
-
-        # pdf_download_link = self.browser.find_element_by_id("MainContent_ViewYourBill_ViewYourBillYourCharges_hlkDownloadThisBill").get_attribute('href')
-
-        # self.browser.get(pdf_download_link)
-        ########################################
-
-        path = "Bill-1.pdf"
+        path = "/tmp/Bill"
         name, address = self.scrape_pdf(path)
 
         # self.tear_down()
@@ -218,8 +222,6 @@ class UtilityAccount(object):
 
 if __name__ == "__main__":
     testcase = UtilityAccount("nimo", test_login, test_pwd)
-    # testcase.get_usage_data()
-    # testcase.get_bill_pdf_data()
-
-    print testcase.scrape_pdf("Bill-1.pdf")
+    testcase.get_usage_data()
+    testcase.get_bill_pdf_data()
 

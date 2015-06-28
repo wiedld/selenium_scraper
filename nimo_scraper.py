@@ -221,3 +221,5 @@ if __name__ == "__main__":
     # testcase.get_usage_data()
     # testcase.get_bill_pdf_data()
 
+    print testcase.scrape_pdf("Bill-1.pdf")
+

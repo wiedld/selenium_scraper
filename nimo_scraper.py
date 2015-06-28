@@ -1,15 +1,21 @@
 
 """
-    Purpose: to retrieve monthly kWh data from the National Grid
+    Purpose:
+    (1) to retrieve monthly kWh data from the National Grid
     (Niagara Mohawk territory) website, in downloaded xml, and
     save to output csv.
 
+    (2) to retrieve PDF billing from the same website,
+    scrape, and retrieve key datapoints.
+
     To Run:
         1 - install requirements.
-        2 - source utility login creds to os
-        3 - download the selenium server:
+        2 - confirm installation of PDF miner into virtual env path
+            referenced ./env/bin/pdf2txt.py
+        3 - source utility login creds to os
+        4 - download the selenium server:
                 http://docs.seleniumhq.org/download/
-        4 - launch selenium server from cmd line:
+        5 - launch selenium server from cmd line:
                 > java -jar selenium-server-standalone-2.x.x.jar
 
 """
@@ -30,6 +36,7 @@ import csv
 import re
 import xml.etree.ElementTree as ET
 import urllib2
+import subprocess
 
 
 test_login = os.environ["nimo_test_login"]
@@ -156,6 +163,29 @@ class UtilityAccount(object):
         print "Usage data retrieved for %s" % (self.user_login)
 
 
+    def scrape_pdf(self, path):
+        """take downloaded PDF, convert to html with cmd line tool,
+        import and search DOM tree."""
+
+        # conert PDF to html
+        bash_cmd = "env/bin/pdf2txt.py -o output.html %s" % path
+        process = subprocess.Popen(bash_cmd.split(), stdout=subprocess.PIPE)
+        output = process.communicate()[0]
+
+        # tree doesn't have well searchable identifiers (id or classes)
+        # solution: try as string and search with regex
+        pdf_string = open("output.html").read()
+        acct_num = re.search(r'([0-9]{5}\-[0-9]{5})', pdf_string).group()
+        print acct_num
+        name_address = re.search(r'<span style="font\-family: IRLGKT\+Swiss721BT\-Roman; font\-size:10px">(\w+\s){2,4}<br>[0-9]{1,}[(\s\w+)\,\-]{1,}<br>[(\s\w+)\,\-]{1,}\s[0-9]{5}', pdf_string)
+
+        # parse out the name, and address, separately
+        name = re.search(r'<span style="font\-family: IRLGKT\+Swiss721BT\-Roman; font\-size:10px">(\w+\s){2,4}<br>', name_address.group()).group().split(">")[1].replace("<br", "")
+        address = re.search(r'<br>[0-9]{1,}[(\s\w+)\,\-]{1,}<br>[(\s\w+)\,\-]{1,}\s[0-9]{5}', name_address.group()).group().replace("<br>", "").replace("\n", ", ")
+
+        return name, address
+
+
     def get_bill_pdf_data(self):
         """navigating through the utility website, downloading the pdf,
         and regex for key params."""
@@ -179,14 +209,15 @@ class UtilityAccount(object):
         # self.browser.get(pdf_download_link)
         ########################################
 
-        self.scrape_pdf(path)
+        path = "Bill-1.pdf"
+        name, address = self.scrape_pdf(path)
 
         # self.tear_down()
-        print "Usage data retrieved for %s" % (self.user_login)
+        print "Billing data retrieved for %s, named %s and living at %s" % (self.user_login, name, address)
 
 
 if __name__ == "__main__":
     testcase = UtilityAccount("nimo", test_login, test_pwd)
     # testcase.get_usage_data()
-    testcase.get_bill_pdf_data()
+    # testcase.get_bill_pdf_data()
 

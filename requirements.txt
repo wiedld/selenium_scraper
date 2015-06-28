@@ -1,2 +1,11 @@
+Mako==1.0.1
+MarkupSafe==0.23
+SQLAlchemy==1.0.5
+alembic==0.7.6
+beautifulsoup4==4.3.2
+pdfminer==20140328
+requests==2.7.0
+scraperwiki==0.5
 selenium==2.46.0
+six==1.9.0
 wsgiref==0.1.2
